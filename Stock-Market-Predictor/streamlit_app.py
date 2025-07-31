@@ -79,13 +79,7 @@ df.dropna(inplace=True)
 
 # streamlit_app.py
 
-import subprocess
-import sys
 
-# 🔽 Install necessary packages dynamically
-required_packages = ['ta', 'mplfinance']
-for package in required_packages:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
 import pandas as pd
 import ta
