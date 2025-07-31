@@ -32,7 +32,7 @@ st.write("Visible files:", os.listdir())
 
 
 # Clean up column names (remove spaces, weird chars)
-data.columns = data.columns.str.strip()
+df.columns = df.columns.str.strip()
 
 # Debug: show column names
 import streamlit as st
