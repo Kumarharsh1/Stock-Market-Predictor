@@ -11,9 +11,12 @@ import pandas as pd
 st.title("📈 Stock Market Predictor")
 import pandas as pd
 
-data = pd.read_csv("ADANIPORTS.csv")  # Make sure the path is correct
+uploaded_file = st.file_uploader("Upload your ADANIPORTS CSV file", type=["csv"])
 data.columns = data.columns.str.strip().str.title()
 
+import streamlit as st
+
+st.write("✅ Columns in CSV:", data.columns.tolist())
 
 
 if uploaded_file is not None:
