@@ -10,10 +10,11 @@ Original file is located at
 from google.colab import files
 uploaded = files.upload()
 
-import pandas as pd
 
 # Load and rename columns if necessary
-data = pd.read_csv('ADANIPORTS.csv')
+import pandas as pd
+
+df = pd.read_csv("ADANIPORTS.csv")  # Ensure this file is in the same directory
 
 # Rename to standard column names
 data.rename(columns={
