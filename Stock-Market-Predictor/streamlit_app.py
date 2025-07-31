@@ -4,22 +4,7 @@ import pandas as pd
 import subprocess
 import sys
 
-package = "pandas"  # Example package
 
-try:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-except subprocess.CalledProcessError as e:
-    print(f"Failed to install {package}: {e}")
-
-import subprocess
-import sys
-
-package = "pandas"
-
-try:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-except subprocess.CalledProcessError as e:
-    print(f"Failed to install {package}: {e}")
 
 import streamlit as st
 import pandas as pd
