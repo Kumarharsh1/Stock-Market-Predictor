@@ -116,7 +116,7 @@ df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator(
 df['EMA50'] = ta.trend.EMAIndicator(close=df['Close'], window=50).ema_indicator()
 
 # Bollinger Bands
-bb = ta.volatility.BollingerBands(close=data['Close'], window=20, window_dev=2)
+bb = ta.volatility.BollingerBands(close=df['Close'], window=20, window_dev=2)
 df['BB_upper'] = bb.bollinger_hband()
 df['BB_lower'] = bb.bollinger_lband()
 
