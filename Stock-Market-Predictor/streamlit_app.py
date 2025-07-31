@@ -32,7 +32,20 @@ data.set_index('Date', inplace=True)
 # Drop NaNs if any
 data.dropna(inplace=True)
 
-!pip install ta mplfinance --quiet
+# streamlit_app.py
+
+import subprocess
+import sys
+
+# 🔽 Install necessary packages dynamically
+required_packages = ['ta', 'mplfinance']
+for package in required_packages:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+import pandas as pd
+import ta
+import mplfinance as mpf
+# ... rest of your code
 
 import ta
 import mplfinance as mpf
