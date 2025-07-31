@@ -36,10 +36,10 @@ df.columns = df.columns.str.strip()
 
 # Debug: show column names
 import streamlit as st
-st.write("✅ Columns in CSV:", data.columns.tolist())
+st.write("✅ Columns in CSV:", df.columns.tolist())
 
 # Now safely parse the 'Date' column
-data['Date'] = pd.to_datetime(data['Date'])
+df['Date'] = pd.to_datetime(df['Date'])
 import os
 import streamlit as st
 st.write("Current working directory:", os.getcwd())
@@ -68,11 +68,11 @@ data.rename(columns={
 }, inplace=True)
 
 # Convert date and set as index
-data['Date'] = pd.to_datetime(data['Date'])
-data.set_index('Date', inplace=True)
+df['Date'] = pd.to_datetime(df['Date'])
+df.set_index('Date', inplace=True)
 
 # Drop NaNs if any
-data.dropna(inplace=True)
+df.dropna(inplace=True)
 
 # streamlit_app.py
 
