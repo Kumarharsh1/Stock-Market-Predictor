@@ -109,7 +109,7 @@ import mplfinance as mpf
 vwap = ta.volume.VolumeWeightedAveragePrice(
     high=df['High'], low=df['Low'], close=df['Close'], volume=df['Volume']
 )
-data['VWAP'] = vwap.volume_weighted_average_price()
+df['VWAP'] = vwap.volume_weighted_average_price()
 
 # EMAs
 df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator()
