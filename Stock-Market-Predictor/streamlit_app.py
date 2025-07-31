@@ -18,7 +18,7 @@ uploaded_file = st.file_uploader("Upload your ADANIPORTS CSV file", type=["csv"]
 
 import streamlit as st
 
-st.write("✅ Columns in CSV:", data.columns.tolist())
+st.write("✅ Columns in CSV:", df.columns.tolist())
 
 
 if uploaded_file is not None:
@@ -41,7 +41,7 @@ else:
   # example
 import os
 st.write("Visible files:", os.listdir())
-data.columns = data.columns.str.strip().str.title()
+df.columns = df.columns.str.strip().str.title()
 
 
 
