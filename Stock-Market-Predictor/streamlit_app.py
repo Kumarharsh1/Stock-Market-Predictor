@@ -2,7 +2,30 @@
 # Load and rename columns if necessary
 import pandas as pd
 
-df = pd.read_csv("C:/Users/Asus/Downloads/ADANIPORTS.csv")
+import streamlit as st
+import pandas as pd
+
+st.title("📈 Stock Market Predictor")
+
+uploaded_file = st.file_uploader("Upload your ADANIPORTS CSV file", type=["csv"])
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    df.columns = df.columns.str.strip()
+    st.success("✅ File uploaded successfully!")
+    
+    # Show the dataframe
+    st.write("### Preview of Uploaded Data", df.head())
+
+    # Parse date column if available
+    if 'Date' in df.columns:
+        df['Date'] = pd.to_datetime(df['Date'])
+        st.line_chart(df.set_index("Date")["Close"])
+    else:
+        st.error("❌ 'Date' column not found.")
+else:
+    st.warning("⚠️ Please upload a CSV file to continue.")
+
   # example
 import os
 st.write("Visible files:", os.listdir())
