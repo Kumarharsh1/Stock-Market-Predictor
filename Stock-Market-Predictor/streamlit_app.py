@@ -33,6 +33,7 @@ else:
 import os
 st.write("Visible files:", os.listdir())
 
+st.write("Columns in uploaded data:", data.columns.tolist())
 
 # Clean up column names (remove spaces, weird chars)
 df.columns = df.columns.str.strip()
