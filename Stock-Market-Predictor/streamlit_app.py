@@ -13,9 +13,19 @@ Original file is located at
 # Load and rename columns if necessary
 import pandas as pd
 
-import yfinance as yf
-data = yf.download("ADANIPORTS.NS", start="2022-01-01", end="2024-12-31")
 
+# Read CSV
+data = pd.read_csv('ADANIPORTS.csv')
+
+# Clean up column names (remove spaces, weird chars)
+data.columns = data.columns.str.strip()
+
+# Debug: show column names
+import streamlit as st
+st.write("✅ Columns in CSV:", data.columns.tolist())
+
+# Now safely parse the 'Date' column
+data['Date'] = pd.to_datetime(data['Date'])
 
 
 
