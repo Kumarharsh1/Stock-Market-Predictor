@@ -15,7 +15,7 @@ import pandas as pd
 
 
 # Read CSV
-data = pd.read_csv('ADANIPORTS.csv')
+df = pd.read_csv("ADANIPORTS.csv")
 
 # Clean up column names (remove spaces, weird chars)
 data.columns = data.columns.str.strip()
