@@ -69,7 +69,7 @@ import streamlit as st
 import pandas as pd
 
 uploaded_file = st.file_uploader("Upload your CSV", type="csv")
-data.columns = [str(col).strip().title() for col in data.columns]
+data.columns = [str(col).strip().title() for col in df.columns]
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
