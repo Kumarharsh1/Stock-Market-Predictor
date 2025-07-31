@@ -95,7 +95,7 @@ df.dropna(inplace=True)
 
 # streamlit_app.py
 
-st.write(data.head())
+st.write(df.head())
 
 import pandas as pd
 import ta
