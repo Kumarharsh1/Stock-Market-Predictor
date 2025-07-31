@@ -32,7 +32,8 @@ else:
   # example
 import os
 st.write("Visible files:", os.listdir())
-data.columns = data.columns.str.strip().str.capitalize()
+data.columns = data.columns.str.strip().str.title()
+
 
 
 st.write("Columns in uploaded data:", data.columns.tolist())
