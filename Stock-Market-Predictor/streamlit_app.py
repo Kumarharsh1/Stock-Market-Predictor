@@ -107,25 +107,25 @@ import mplfinance as mpf
 
 # VWAP
 vwap = ta.volume.VolumeWeightedAveragePrice(
-    high=data['High'], low=data['Low'], close=data['Close'], volume=data['Volume']
+    high=df['High'], low=df['Low'], close=df['Close'], volume=df['Volume']
 )
 data['VWAP'] = vwap.volume_weighted_average_price()
 
 # EMAs
-data['EMA20'] = ta.trend.EMAIndicator(close=data['Close'], window=20).ema_indicator()
-data['EMA50'] = ta.trend.EMAIndicator(close=data['Close'], window=50).ema_indicator()
+df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator()
+df['EMA50'] = ta.trend.EMAIndicator(close=df['Close'], window=50).ema_indicator()
 
 # Bollinger Bands
 bb = ta.volatility.BollingerBands(close=data['Close'], window=20, window_dev=2)
-data['BB_upper'] = bb.bollinger_hband()
-data['BB_lower'] = bb.bollinger_lband()
+df['BB_upper'] = bb.bollinger_hband()
+df['BB_lower'] = bb.bollinger_lband()
 
 add_plots = [
-    mpf.make_addplot(data['EMA20'], color='blue', width=1.5),
-    mpf.make_addplot(data['EMA50'], color='orange', width=1.5),
-    mpf.make_addplot(data['VWAP'], color='purple', linestyle=':', width=1.5),
-    mpf.make_addplot(data['BB_upper'], color='gray', linestyle='--', width=1),
-    mpf.make_addplot(data['BB_lower'], color='gray', linestyle='--', width=1)
+    mpf.make_addplot(df['EMA20'], color='blue', width=1.5),
+    mpf.make_addplot(df['EMA50'], color='orange', width=1.5),
+    mpf.make_addplot(df['VWAP'], color='purple', linestyle=':', width=1.5),
+    mpf.make_addplot(df['BB_upper'], color='gray', linestyle='--', width=1),
+    mpf.make_addplot(df['BB_lower'], color='gray', linestyle='--', width=1)
 ]
 
 # Plot and save the high-quality chart
@@ -145,18 +145,18 @@ from google.colab import files
 files.download('figure1_strategy_chart.png')
 
 # Zoom into a specific range, e.g., a range present in the data
-zoom_data = data.loc['2021-01-01':'2021-01-31']
+zoom_df = df.loc['2021-01-01':'2021-01-31']
 
 add_plots_zoom = [
-    mpf.make_addplot(zoom_data['EMA20'], color='blue'),
-    mpf.make_addplot(zoom_data['EMA50'], color='orange'),
-    mpf.make_addplot(zoom_data['VWAP'], color='purple', linestyle=':'),
-    mpf.make_addplot(zoom_data['BB_upper'], color='gray', linestyle='--'),
-    mpf.make_addplot(zoom_data['BB_lower'], color='gray', linestyle='--')
+    mpf.make_addplot(zoom_df['EMA20'], color='blue'),
+    mpf.make_addplot(zoom_df['EMA50'], color='orange'),
+    mpf.make_addplot(zoom_df['VWAP'], color='purple', linestyle=':'),
+    mpf.make_addplot(zoom_df['BB_upper'], color='gray', linestyle='--'),
+    mpf.make_addplot(zoom_df['BB_lower'], color='gray', linestyle='--')
 ]
 
 mpf.plot(
-    zoom_data,
+    zoom_df,
     type='candle',
     volume=True,
     title="Zoomed View - VWAP, EMA, BB (Jan 2023)",
@@ -171,14 +171,14 @@ from google.colab import files
 files.download('figure_zoomed_section.png')
 
 # Buy condition: EMA20 > EMA50 and Close > VWAP
-buy_signals = (data['EMA20'] > data['EMA50']) & (data['Close'] > data['VWAP'])
+buy_signals = (df['EMA20'] > df['EMA50']) & (df['Close'] > df['VWAP'])
 
 # Sell condition: EMA20 < EMA50 and Close < VWAP
-sell_signals = (data['EMA20'] < data['EMA50']) & (data['Close'] < data['VWAP'])
+sell_signals = (df['EMA20'] < df['EMA50']) & (df['Close'] < df['VWAP'])
 
 # Create buy/sell markers
-data['Buy'] = data['Low'][buy_signals] * 0.98  # slightly below candle for arrow
-data['Sell'] = data['High'][sell_signals] * 1.02  # slightly above candle
+df['Buy'] = df['Low'][buy_signals] * 0.98  # slightly below candle for arrow
+df['Sell'] = df['High'][sell_signals] * 1.02  # slightly above candle
 
 import mplfinance as mpf
 
@@ -190,14 +190,14 @@ apds = [
     mpf.make_addplot(data['BB_lower'], color='gray', linestyle='--'),
 
     # Arrows
-    mpf.make_addplot(data['Buy'], type='scatter', marker='^', markersize=200,
+    mpf.make_addplot(df['Buy'], type='scatter', marker='^', markersize=200,
                      color='green', panel=0),
-    mpf.make_addplot(data['Sell'], type='scatter', marker='v', markersize=200,
+    mpf.make_addplot(df['Sell'], type='scatter', marker='v', markersize=200,
                      color='red', panel=0)
 ]
 
 mpf.plot(
-    data,
+    df,
     type='candle',
     volume=True,
     style='yahoo',
@@ -212,33 +212,33 @@ from google.colab import files
 files.download('figure2_buy_sell_chart.png')
 
 # Choose a short time window to zoom in
-zoom_data = data.loc['2021-01-01':'2021-01-31'].copy()
+zoom_df = df.loc['2021-01-01':'2021-01-31'].copy()
 
 # Recalculate conditions in zoomed data
 zoom_data['Buy'] = zoom_data['Low'][
-    (zoom_data['EMA20'] > zoom_data['EMA50']) & (zoom_data['Close'] > zoom_data['VWAP'])
+    (zoom_df['EMA20'] > zoom_df['EMA50']) & (zoom_df['Close'] > zoom_df['VWAP'])
 ] * 0.98
 
-zoom_data['Sell'] = zoom_data['High'][
-    (zoom_data['EMA20'] < zoom_data['EMA50']) & (zoom_data['Close'] < zoom_data['VWAP'])
+zoom_df['Sell'] = zoom_df['High'][
+    (zoom_df['EMA20'] < zoom_df['EMA50']) & (zoom_df['Close'] < zoom_df['VWAP'])
 ] * 1.02
 
 apds_zoom = [
-    mpf.make_addplot(zoom_data['EMA20'], color='blue'),
-    mpf.make_addplot(zoom_data['EMA50'], color='orange'),
-    mpf.make_addplot(zoom_data['VWAP'], color='purple', linestyle=':'),
-    mpf.make_addplot(zoom_data['BB_upper'], color='gray', linestyle='--'),
-    mpf.make_addplot(zoom_data['BB_lower'], color='gray', linestyle='--'),
+    mpf.make_addplot(zoom_df['EMA20'], color='blue'),
+    mpf.make_addplot(zoom_df['EMA50'], color='orange'),
+    mpf.make_addplot(zoom_df['VWAP'], color='purple', linestyle=':'),
+    mpf.make_addplot(zoom_df['BB_upper'], color='gray', linestyle='--'),
+    mpf.make_addplot(zoom_df['BB_lower'], color='gray', linestyle='--'),
 
     # Buy/Sell markers
-    mpf.make_addplot(zoom_data['Buy'], type='scatter', marker='^', markersize=200,
+    mpf.make_addplot(zoom_df['Buy'], type='scatter', marker='^', markersize=200,
                      color='green', panel=0),
-    mpf.make_addplot(zoom_data['Sell'], type='scatter', marker='v', markersize=200,
+    mpf.make_addplot(zoom_df['Sell'], type='scatter', marker='v', markersize=200,
                      color='red', panel=0)
 ]
 
 mpf.plot(
-    zoom_data,
+    zoom_df,
     type='candle',
     volume=True,
     style='yahoo',
