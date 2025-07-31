@@ -58,7 +58,7 @@ if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
 
 # Rename to standard column names
-data.rename(columns={
+df.rename(columns={
     'date': 'Date',
     'open': 'Open',
     'high': 'High',
