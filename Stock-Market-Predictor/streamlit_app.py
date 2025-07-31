@@ -74,7 +74,7 @@ df.columns = [str(col).strip().title() for col in df.columns]
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
 
-print(data.columns.tolist())
+print(df.columns.tolist())
 
 # Rename to standard column names
 df.rename(columns={
