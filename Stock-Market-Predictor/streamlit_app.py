@@ -9,6 +9,10 @@ import streamlit as st
 import pandas as pd
 
 st.title("📈 Stock Market Predictor")
+import pandas as pd
+
+data = pd.read_csv("ADANIPORTS.csv")  # Make sure the path is correct
+data.columns = data.columns.str.strip().str.title()
 
 uploaded_file = st.file_uploader("Upload your ADANIPORTS CSV file", type=["csv"])
 
