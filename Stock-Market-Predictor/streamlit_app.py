@@ -13,7 +13,13 @@ Original file is located at
 # Load and rename columns if necessary
 import pandas as pd
 
-df = pd.read_csv("ADANIPORTS.csv")  # Ensure this file is in the same directory
+import yfinance as yf
+data = yf.download("ADANIPORTS.NS", start="2022-01-01", end="2024-12-31")
+
+
+
+
+
 
 import streamlit as st
 import pandas as pd
