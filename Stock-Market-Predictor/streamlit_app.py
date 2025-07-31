@@ -69,8 +69,12 @@ import streamlit as st
 import pandas as pd
 
 uploaded_file = st.file_uploader("Upload your CSV", type="csv")
+
+data.columns = data.columns.str.strip().str.title()
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
+
+print(data.columns.tolist())
 
 # Rename to standard column names
 df.rename(columns={
@@ -91,7 +95,7 @@ df.dropna(inplace=True)
 
 # streamlit_app.py
 
-
+st.write(data.head())
 
 import pandas as pd
 import ta
