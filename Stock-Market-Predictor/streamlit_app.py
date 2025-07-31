@@ -16,6 +16,13 @@ import pandas as pd
 
 df = pd.read_csv("ADANIPORTS.csv")  # Ensure this file is in the same directory
 
+import streamlit as st
+import pandas as pd
+
+uploaded_file = st.file_uploader("Upload your CSV", type="csv")
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+
 # Rename to standard column names
 data.rename(columns={
     'date': 'Date',
