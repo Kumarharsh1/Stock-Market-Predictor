@@ -2,7 +2,8 @@
 # Load and rename columns if necessary
 import pandas as pd
 
-df = pd.read_csv("data/ADANIPORTS.csv")  # example
+df = pd.read_csv("ADANIPORTS.csv")
+  # example
 import os
 st.write("Visible files:", os.listdir())
 
