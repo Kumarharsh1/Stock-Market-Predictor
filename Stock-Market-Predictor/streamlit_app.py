@@ -27,7 +27,7 @@ if uploaded_file is not None:
     st.success("✅ File uploaded successfully!")
     
     # Show the dataframe
-    st.write("### Preview of Uploaded Data", df.head())
+    st.write("### Preview of Uploaded df", df.head())
 
     # Parse date column if available
     if 'Date' in df.columns:
@@ -183,11 +183,11 @@ df['Sell'] = df['High'][sell_signals] * 1.02  # slightly above candle
 import mplfinance as mpf
 
 apds = [
-    mpf.make_addplot(data['EMA20'], color='blue'),
-    mpf.make_addplot(data['EMA50'], color='orange'),
-    mpf.make_addplot(data['VWAP'], color='purple', linestyle=':'),
-    mpf.make_addplot(data['BB_upper'], color='gray', linestyle='--'),
-    mpf.make_addplot(data['BB_lower'], color='gray', linestyle='--'),
+    mpf.make_addplot(df['EMA20'], color='blue'),
+    mpf.make_addplot(df['EMA50'], color='orange'),
+    mpf.make_addplot(df['VWAP'], color='purple', linestyle=':'),
+    mpf.make_addplot(df['BB_upper'], color='gray', linestyle='--'),
+    mpf.make_addplot(df['BB_lower'], color='gray', linestyle='--'),
 
     # Arrows
     mpf.make_addplot(df['Buy'], type='scatter', marker='^', markersize=200,
@@ -215,7 +215,7 @@ files.download('figure2_buy_sell_chart.png')
 zoom_df = df.loc['2021-01-01':'2021-01-31'].copy()
 
 # Recalculate conditions in zoomed data
-zoom_data['Buy'] = zoom_data['Low'][
+zoom_df['Buy'] = zoom_df['Low'][
     (zoom_df['EMA20'] > zoom_df['EMA50']) & (zoom_df['Close'] > zoom_df['VWAP'])
 ] * 0.98
 
