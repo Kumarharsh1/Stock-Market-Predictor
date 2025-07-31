@@ -17,6 +17,11 @@ st.write("✅ Columns in CSV:", data.columns.tolist())
 
 # Now safely parse the 'Date' column
 data['Date'] = pd.to_datetime(data['Date'])
+import os
+import streamlit as st
+st.write("Current working directory:", os.getcwd())
+st.write("Files in directory:", os.listdir())
+
 
 
 
