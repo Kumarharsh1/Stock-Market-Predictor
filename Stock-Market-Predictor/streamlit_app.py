@@ -108,3 +108,24 @@ if uploaded_file:
 
 else:
     st.info("Upload your CSV file from NSE or Yahoo Finance to begin analysis.")
+    # --- BUY/SELL Button Indicator at Top ---
+if 'data' in st.session_state and st.session_state.data is not None:
+    df_signal = st.session_state.data.copy()
+    if 'buy' in df_signal.columns and 'sell' in df_signal.columns:
+        signal = "Neutral"
+        color = "gray"
+        if df_signal['buy'].iloc[-1]:
+            signal = "BUY NOW"
+            color = "green"
+        elif df_signal['sell'].iloc[-1]:
+            signal = "SELL NOW"
+            color = "red"
+        
+        st.markdown(f"""
+        <div style='text-align:center; margin-top:10px; margin-bottom:10px;'>
+            <button style="background-color:{color}; color:white; font-size:20px; padding:10px 30px; border:none; border-radius:10px;">
+                {signal}
+            </button>
+        </div>
+        """, unsafe_allow_html=True)
+
