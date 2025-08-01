@@ -59,13 +59,9 @@ with st.sidebar.expander("Technical Indicators"):
     rsi_period = st.slider("RSI Period", 5, 30, 14)
 
 # --- Main App Logic ---
-if 'data' in st.session_state and st.session_state.data is not None:
+# The most robust check is right here.
+if 'data' in st.session_state and st.session_state.data is not None and not st.session_state.data.empty:
     df = st.session_state.data.copy()
-
-    # --- CRITICAL FIX: Add this check to prevent errors with empty dataframes ---
-    if df.empty:
-        st.warning("The selected data is empty. Please check your ticker and date range.")
-        st.stop()
     
     # Rename columns to lowercase for ta library
     df.columns = [col.lower() for col in df.columns]
@@ -176,4 +172,3 @@ else:
     ### About the App:
     - **Technical Analysis:** The app uses popular indicators like EMA, Bollinger Bands, RSI, and MACD to generate Buy/Sell signals.
     - **Machine Learning:** A simple Linear Regression model is trained on historical data to predict the next day's closing price based on the selected indicators.
-    """)
