@@ -140,19 +140,21 @@ add_plots = [
     mpf.make_addplot(df['BB_upper'], color='gray', linestyle='--', width=1),
     mpf.make_addplot(df['BB_lower'], color='gray', linestyle='--', width=1)
 ]
+if not df.empty:
+    # Ensure index and columns are ready
+    fig, _ = mpf.plot(
+        df,
+        type='candle',
+        volume=True,
+        style='yahoo',
+        title="ADANIPORTS Strategy Chart (VWAP, EMA, Bollinger Bands)",
+        addplot=apds,  # apds must be defined earlier
+        figscale=2.0,
+        figratio=(18, 10),
+        returnfig=True,
+        savefig='figure1_strategy_chart.png'
+    )
 
-# Plot and save the high-quality chart
-mpf.plot(
-    data,
-    type='candle',
-    volume=True,
-    style='yahoo',
-    title="ADANIPORTS Strategy Chart (VWAP, EMA, Bollinger Bands)",
-    addplot=add_plots,
-    figscale=2.0,           # Increase scale for clarity
-    figratio=(18, 10),      # Wide aspect ratio
-    savefig='figure1_strategy_chart.png'
-)
 
 from google.colab import files
 files.download('figure1_strategy_chart.png')
