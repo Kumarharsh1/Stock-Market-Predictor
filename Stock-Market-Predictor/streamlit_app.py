@@ -157,26 +157,38 @@ if uploaded_file is not None:
             sell_signals = df[df['Sell']].tail(5)
             st.dataframe(sell_signals[["Close", f"EMA{ema_short}", f"EMA{ema_long}", "VWAP", "RSI"]])
 
-        st.subheader("Candlestick Chart with Signals")
-        if df.empty:
+       # Visualization
+st.subheader("Candlestick Chart with Signals")
+
+if df.empty:
     st.error("No data available for the selected date range and indicators. Please adjust your inputs or upload a different file.")
 else:
-    # continue with candlestick plotting here
+    apds = [
+        mpf.make_addplot(df[f'EMA{ema_short}'], color='blue', width=1.5, panel=0),
+        mpf.make_addplot(df[f'EMA{ema_long}'], color='orange', width=1.5, panel=0),
+        mpf.make_addplot(df['VWAP'], color='purple', linestyle=':', width=1.5, panel=0),
+        mpf.make_addplot(df['BB_upper'], color='gray', linestyle='--', width=1, panel=0),
+        mpf.make_addplot(df['BB_lower'], color='gray', linestyle='--', width=1, panel=0),
+        mpf.make_addplot(df['Buy_Marker'], type='scatter', marker='^', 
+                         markersize=100, color='green', panel=0),
+        mpf.make_addplot(df['Sell_Marker'], type='scatter', marker='v', 
+                         markersize=100, color='red', panel=0)
+    ]
 
-        apds = [
-            mpf.make_addplot(df[f'EMA{ema_short}'], color='blue', width=1.5),
-            mpf.make_addplot(df[f'EMA{ema_long}'], color='orange', width=1.5),
-            mpf.make_addplot(df['VWAP'], color='purple', linestyle=':'),
-            mpf.make_addplot(df['BB_upper'], color='gray', linestyle='--'),
-            mpf.make_addplot(df['BB_lower'], color='gray', linestyle='--'),
-            mpf.make_addplot(df['Buy_Marker'], type='scatter', marker='^', markersize=100, color='green'),
-            mpf.make_addplot(df['Sell_Marker'], type='scatter', marker='v', markersize=100, color='red')
-        ]
+    fig, axes = mpf.plot(
+        df,
+        type='candle',
+        volume=True,
+        style='yahoo',
+        title="Stock Analysis with Technical Indicators",
+        addplot=apds,
+        figscale=1.5,
+        figratio=(12, 6),
+        returnfig=True
+    )
 
-        fig, _ = mpf.plot(df, type='candle', style='yahoo', volume=True,
-                          title='Candlestick Chart with Signals', addplot=apds,
-                          returnfig=True, figscale=1.5, figratio=(12, 6))
-        st.pyplot(fig)
+    st.pyplot(fig)
+
 
         st.subheader("Market Sentiment Analysis")
         last_signal = "Neutral"
