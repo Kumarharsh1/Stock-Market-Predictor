@@ -5,7 +5,7 @@ import mplfinance as mpf
 import matplotlib.pyplot as plt
 from datetime import datetime
 import numpy as np
-np.NaN
+npNaN = np.nan
 
 
 st.set_page_config(layout="wide")
