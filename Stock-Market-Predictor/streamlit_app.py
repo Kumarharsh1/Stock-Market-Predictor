@@ -128,4 +128,55 @@ if 'data' in st.session_state and st.session_state.data is not None:
             </button>
         </div>
         """, unsafe_allow_html=True)
+        # --- Additional Calculations ---
+df['ema_fast'] = ta.trend.EMAIndicator(df['close'], window=20).ema_indicator()
+df['ema_slow'] = ta.trend.EMAIndicator(df['close'], window=50).ema_indicator()
+df['volume_avg10'] = df['volume'].rolling(window=10).mean()
+
+# --- Signal Logic ---
+df['buy_signal'] = (
+    (df['close'] > df['vwap']) &
+    (df['ema_fast'] > df['ema_slow']) &
+    (df['rsi'] > 40) & (df['rsi'] < 60) &
+    (df['close'] <= df['bb_lower'] * 1.05) &  # close is near or below lower BB
+    (df['volume'] > df['volume_avg10'])
+)
+
+df['sell_signal'] = (
+    (df['close'] < df['vwap']) &
+    (df['ema_fast'] < df['ema_slow']) &
+    ((df['rsi'] > 70) | (df['rsi'].diff() < -5)) &
+    (df['close'] >= df['bb_upper'] * 0.95) &  # close is near or above upper BB
+    (df['volume'] > df['volume_avg10'])
+)
+
+# --- Display Buy/Sell Bar ---
+latest_signal = "Neutral"
+bg_color = "#999999"
+
+if df['buy_signal'].iloc[-1]:
+    latest_signal = "BUY Signal Active 📈"
+    bg_color = "#2ecc71"
+elif df['sell_signal'].iloc[-1]:
+    latest_signal = "SELL Signal Active 📉"
+    bg_color = "#e74c3c"
+
+st.markdown(f"""
+<div style='
+    background-color:{bg_color};
+    color:white;
+    font-size:24px;
+    padding:15px;
+    text-align:center;
+    border-radius:8px;
+    margin-bottom:20px;
+'>
+{latest_signal}
+</div>
+""", unsafe_allow_html=True)
+df['buy_marker'] = np.where(df['buy_signal'], df['low'] * 0.98, np.nan)
+df['sell_marker'] = np.where(df['sell_signal'], df['high'] * 1.02, np.nan)
+mpf.make_addplot(df['buy_marker'], type='scatter', marker='^', color='lime', markersize=120),
+mpf.make_addplot(df['sell_marker'], type='scatter', marker='v', color='red', markersize=120),
+
 
