@@ -1,125 +1,126 @@
 import streamlit as st
-import streamlit as st
 import pandas as pd
-import numpy as np
 import ta
 import mplfinance as mpf
 import matplotlib.pyplot as plt
+import numpy as np
 from datetime import datetime, timedelta
 
-st.set_page_config(
-    page_title="📈 Stock Signal Analyzer",
-    layout="wide"
-)
+st.set_page_config(page_title="📈 Smart Trading Signals", layout="wide")
+st.title("📈 Stock Buy/Sell Signal Predictor")
 
-st.title("📊 Stock Market Signal Analyzer")
-st.markdown("Upload your CSV and get buy/sell signals based on 5-condition strategy.")
+# Upload CSV File
+st.sidebar.header("Upload Data")
+file = st.sidebar.file_uploader("Upload a CSV with columns: Date, Open, High, Low, Close, Volume")
 
-# Sidebar Upload and Controls
-st.sidebar.header("📁 Upload Data & Settings")
-uploaded_file = st.sidebar.file_uploader("Upload CSV", type=["csv"])
+# Indicator settings
+st.sidebar.header("Indicator Settings")
+ema_fast_period = st.sidebar.slider("Fast EMA Period", 5, 50, 20)
+ema_slow_period = st.sidebar.slider("Slow EMA Period", 20, 200, 50)
+bb_period = st.sidebar.slider("Bollinger Bands Period", 10, 50, 20)
+bb_std = st.sidebar.slider("Bollinger Bands Std Dev", 1, 3, 2)
+rsi_period = st.sidebar.slider("RSI Period", 5, 30, 14)
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    df.columns = df.columns.str.strip().str.lower()
-    if 'date' in df.columns:
-        df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
-        df.dropna(subset=['date'], inplace=True)
-        df.set_index('date', inplace=True)
-    else:
+# Date Range selection
+st.sidebar.header("Date Range")
+def_date = datetime.today()
+start_date = st.sidebar.date_input("Start Date", def_date - timedelta(days=180))
+end_date = st.sidebar.date_input("End Date", def_date)
+
+if file:
+    df = pd.read_csv(file)
+    df.columns = df.columns.str.lower().str.strip()
+
+    if 'date' not in df.columns:
         st.error("CSV must contain a 'Date' column.")
         st.stop()
 
-    df.dropna(subset=['open', 'high', 'low', 'close', 'volume'], inplace=True)
+    df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
+    df.dropna(subset=['date'], inplace=True)
+    df.set_index('date', inplace=True)
+    df = df.loc[start_date:end_date]
+    df.dropna(inplace=True)
 
-    # Sidebar date selection
-    min_date, max_date = df.index.min(), df.index.max()
-    start = st.sidebar.date_input("Start Date", min_value=min_date.date(), max_value=max_date.date(), value=(max_date - timedelta(days=60)).date())
-    end = st.sidebar.date_input("End Date", min_value=min_date.date(), max_value=max_date.date(), value=max_date.date())
-
-    df = df.loc[(df.index.date >= start) & (df.index.date <= end)]
-
-    if df.empty:
-        st.warning("No data in this date range. Try changing it.")
-        st.stop()
-
-    # Sidebar indicator selection
-    st.sidebar.header("📐 Indicators")
-    fast_period = st.sidebar.slider("Fast EMA", 5, 20, 10)
-    slow_period = st.sidebar.slider("Slow EMA", 10, 100, 20)
-    rsi_period = st.sidebar.slider("RSI Period", 5, 21, 14)
-    bb_period = st.sidebar.slider("Bollinger Band Period", 10, 30, 20)
-    volume_period = 10
-
-    # Compute indicators
-    df[f'ema{fast_period}'] = ta.trend.ema_indicator(df['close'], fast_period)
-    df[f'ema{slow_period}'] = ta.trend.ema_indicator(df['close'], slow_period)
-    df['vwap'] = ta.volume.volume_weighted_average_price(df['high'], df['low'], df['close'], df['volume'])
-    df['rsi'] = ta.momentum.rsi(df['close'], rsi_period)
-    bb = ta.volatility.BollingerBands(df['close'], window=bb_period)
-    df['bb_lower'] = bb.bollinger_lband()
+    # Calculate indicators
+    df['vwap'] = ta.volume.VolumeWeightedAveragePrice(df['high'], df['low'], df['close'], df['volume']).volume_weighted_average_price()
+    df['ema_fast'] = ta.trend.EMAIndicator(df['close'], ema_fast_period).ema_indicator()
+    df['ema_slow'] = ta.trend.EMAIndicator(df['close'], ema_slow_period).ema_indicator()
+    bb = ta.volatility.BollingerBands(df['close'], bb_period, bb_std)
     df['bb_upper'] = bb.bollinger_hband()
-    df['vol_avg'] = df['volume'].rolling(volume_period).mean()
+    df['bb_lower'] = bb.bollinger_lband()
+    df['rsi'] = ta.momentum.RSIIndicator(df['close'], rsi_period).rsi()
+    df['vol_avg10'] = df['volume'].rolling(10).mean()
 
-    # Buy/Sell Conditions
+    # Buy and Sell Signal Logic
     df['buy_signal'] = (
         (df['close'] > df['vwap']) &
-        (df[f'ema{fast_period}'] > df[f'ema{slow_period}']) &
+        (df['ema_fast'] > df['ema_slow']) &
         (df['rsi'] > 40) & (df['rsi'] < 60) &
-        (df['close'] < df['bb_lower'] * 1.05) &
-        (df['volume'] > df['vol_avg'])
+        (df['close'] < df['bb_lower'] * 1.02) &
+        (df['volume'] > df['vol_avg10'])
     )
 
     df['sell_signal'] = (
         (df['close'] < df['vwap']) &
-        (df[f'ema{fast_period}'] < df[f'ema{slow_period}']) &
-        ((df['rsi'] > 70) | (df['rsi'].diff() < -5)) &
-        (df['close'] > df['bb_upper'] * 0.95) &
-        (df['volume'] > df['vol_avg'])
+        (df['ema_fast'] < df['ema_slow']) &
+        (df['rsi'] > 70) &
+        (df['close'] > df['bb_upper'] * 0.98) &
+        (df['volume'] > df['vol_avg10'])
     )
-   
 
-
+    # Add markers
     df['buy_marker'] = np.where(df['buy_signal'], df['low'] * 0.98, np.nan)
     df['sell_marker'] = np.where(df['sell_signal'], df['high'] * 1.02, np.nan)
 
-    # Final check before plotting
-    if df.empty or df[['open', 'high', 'low', 'close']].isnull().any().any():
-        st.warning("Insufficient data to render chart.")
-        st.stop()
+    # Show recent signals
+    st.subheader("📊 Recent Trading Signals")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write("**Buy Signals**")
+        st.dataframe(df[df['buy_signal']][['close', 'rsi', 'vwap']].tail(5))
+    with col2:
+        st.write("**Sell Signals**")
+        st.dataframe(df[df['sell_signal']][['close', 'rsi', 'vwap']].tail(5))
 
-    # Candlestick Plot
-    st.subheader("📈 Zoomed Candlestick Chart with Buy/Sell Signals")
+    # Signal Status Box
+    latest_status = "Neutral"
+    if df['buy_signal'].iloc[-1]:
+        latest_status = "Buy Signal 📈"
+    elif df['sell_signal'].iloc[-1]:
+        latest_status = "Sell Signal 📉"
+
+    st.markdown("---")
+    st.subheader("📍 Market Decision Box")
+    st.markdown(f"""
+        <div style='padding:15px;background:#111;color:white;text-align:center;border-radius:10px;font-size:24px;'>
+        <strong>{latest_status}</strong>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Plot Chart
+    st.subheader("🕯️ Candlestick Chart with Signals")
     apds = [
-        mpf.make_addplot(df[f'ema{fast_period}'], color='blue'),
-        mpf.make_addplot(df[f'ema{slow_period}'], color='orange'),
-        mpf.make_addplot(df['vwap'], color='purple', linestyle='--'),
-        mpf.make_addplot(df['bb_lower'], color='gray', linestyle='--'),
+        mpf.make_addplot(df['ema_fast'], color='blue'),
+        mpf.make_addplot(df['ema_slow'], color='orange'),
+        mpf.make_addplot(df['vwap'], color='purple'),
         mpf.make_addplot(df['bb_upper'], color='gray', linestyle='--'),
-        mpf.make_addplot(df['buy_marker'], type='scatter', color='green', markersize=150, marker='^'),
-        mpf.make_addplot(df['sell_marker'], type='scatter', color='red', markersize=150, marker='v')
+        mpf.make_addplot(df['bb_lower'], color='gray', linestyle='--'),
+        mpf.make_addplot(df['buy_marker'], type='scatter', marker='^', markersize=100, color='green'),
+        mpf.make_addplot(df['sell_marker'], type='scatter', marker='v', markersize=100, color='red')
     ]
 
     fig, _ = mpf.plot(
         df,
         type='candle',
-        volume=True,
         style='yahoo',
         addplot=apds,
+        volume=True,
         figscale=2.0,
-        figratio=(18,10),
-        title="Zoomed Strategy Candlestick Chart",
-        returnfig=True
+        figratio=(16, 8),
+        returnfig=True,
+        title="Zoomed Strategy Candlestick Chart"
     )
     st.pyplot(fig)
 
-    # Signal Bar at Bottom
-    latest = df.iloc[-1]
-    if latest['buy_signal']:
-        st.success("📢 BUY Signal Detected")
-    elif latest['sell_signal']:
-        st.error("📢 SELL Signal Detected")
-    else:
-        st.info("📢 No Strong Signal - Neutral Zone")
 else:
-    st.info("Please upload a CSV file to begin analysis.")
+    st.info("Upload your CSV file to begin analysis.")
