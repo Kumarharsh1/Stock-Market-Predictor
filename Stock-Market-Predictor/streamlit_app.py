@@ -158,6 +158,11 @@ if uploaded_file is not None:
             st.dataframe(sell_signals[["Close", f"EMA{ema_short}", f"EMA{ema_long}", "VWAP", "RSI"]])
 
         st.subheader("Candlestick Chart with Signals")
+        if df.empty:
+    st.error("No data available for the selected date range and indicators. Please adjust your inputs or upload a different file.")
+else:
+    # continue with candlestick plotting here
+
         apds = [
             mpf.make_addplot(df[f'EMA{ema_short}'], color='blue', width=1.5),
             mpf.make_addplot(df[f'EMA{ema_long}'], color='orange', width=1.5),
