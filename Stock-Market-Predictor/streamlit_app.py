@@ -49,7 +49,7 @@ import os
 st.write("Visible files:", os.listdir())
 
 # 📥 Load your data (make sure the file exists)
-df = pd.read_csv("")  # Replace with your actual filename
+df = pd.read_csv("Stock-Market-Predictor/ADANIPORTS.csv")  # Replace with your actual filename
 
 # 🧼 Clean column names: strip spaces and title-case them
 df.columns = df.columns.str.strip().str.title()
