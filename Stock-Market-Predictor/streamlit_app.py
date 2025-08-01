@@ -21,13 +21,20 @@ This app analyzes stock market data using technical indicators and provides buy/
 Upload your stock data CSV file to get started.
 """)
 
+# Initialize session state
+if 'sample_loaded' not in st.session_state:
+    st.session_state.sample_loaded = False
+
 # Sample Data Button
 if st.button("Load Sample Data (ADANIPORTS)"):
-    sample_url = "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/stocks.csv"
-    sample_data = pd.read_csv(sample_url)
-    sample_data.to_csv("sample_stock_data.csv", index=False)
-    st.session_state.sample_loaded = True
-    st.rerun()
+    try:
+        sample_url = "https://raw.githubusercontent.com/mwaskom/seaborn-data/master/stocks.csv"
+        sample_data = pd.read_csv(sample_url)
+        sample_data.to_csv("sample_stock_data.csv", index=False)
+        st.session_state.sample_loaded = True
+        st.rerun()
+    except Exception as e:
+        st.error(f"Couldn't load sample data: {str(e)}")
 
 # Sidebar Configuration
 st.sidebar.header("Settings")
@@ -41,7 +48,7 @@ uploaded_file = st.sidebar.file_uploader(
 )
 
 # Use sample data if no file uploaded but sample was requested
-if uploaded_file is None and st.session_state.get('sample_loaded', False):
+if uploaded_file is None and st.session_state.sample_loaded:
     try:
         uploaded_file = "sample_stock_data.csv"
     except:
@@ -161,6 +168,7 @@ if uploaded_file is not None:
             (df['Close'] > df['VWAP']) & 
             (df['RSI'] > 30) &
             (df['MACD'] > df['MACD_signal'])
+        )
         
         # Sell condition
         df['Sell'] = (
