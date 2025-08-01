@@ -39,9 +39,23 @@ else:
     st.warning("⚠️ Please upload a CSV file to continue.")
 
   # example
+
+
+import streamlit as st
+import pandas as pd
 import os
+
+# 👀 Check which files are available
 st.write("Visible files:", os.listdir())
+
+# 📥 Load your data (make sure the file exists)
+df = pd.read_csv("")  # Replace with your actual filename
+
+# 🧼 Clean column names: strip spaces and title-case them
 df.columns = df.columns.str.strip().str.title()
+
+# 👓 Show the cleaned DataFrame
+st.write("Formatted DataFrame:", df.head())
 
 
 
