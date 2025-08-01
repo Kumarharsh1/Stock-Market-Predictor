@@ -4,6 +4,7 @@ import pandas_ta as ta
 import mplfinance as mpf
 import matplotlib.pyplot as plt
 from datetime import datetime
+from numpy import NaN as npNaN
 import numpy as np
 npNaN = np.nan
 
