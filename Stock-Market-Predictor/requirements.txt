@@ -5,3 +5,4 @@ scikit-learn
 yfinance
 ta
 mplfinance
+pandas-ta
