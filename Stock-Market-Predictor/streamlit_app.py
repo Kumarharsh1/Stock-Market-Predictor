@@ -162,6 +162,29 @@ files.download('figure1_strategy_chart.png')
 
 # Zoom into a specific range, e.g., a range present in the data
 zoom_df = df.loc['2021-01-01':'2021-01-31']
+import ta
+
+# Calculate EMA20 and EMA50 and add to DataFrame
+df['EMA20'] = ta.trend.EMAIndicator(df['Close'], window=20).ema_indicator()
+df['EMA50'] = ta.trend.EMAIndicator(df['Close'], window=50).ema_indicator()
+
+# Calculate VWAP
+df['VWAP'] = ta.volume.VolumeWeightedAveragePrice(
+    high=df['High'],
+    low=df['Low'],
+    close=df['Close'],
+    volume=df['Volume']
+).volume_weighted_average_price()
+
+# Calculate Bollinger Bands
+bb = ta.volatility.BollingerBands(close=df['Close'], window=20, window_dev=2)
+df['BB_upper'] = bb.bollinger_hband()
+df['BB_lower'] = bb.bollinger_lband()
+
+# (Optional) Dummy buy/sell markers to avoid other errors
+df['Buy'] = df['Low'] * 0.98
+df['Sell'] = df['High'] * 1.02
+
 
 add_plots_zoom = [
     mpf.make_addplot(zoom_df['EMA20'], color='blue'),
