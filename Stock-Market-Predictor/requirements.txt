@@ -1,8 +1,8 @@
-streamlit
-pandas
-matplotlib
-scikit-learn
-yfinance
-ta
+setuptools
+pandas_ta
 mplfinance
-pandas-ta
+streamlit
+ta
+matplotlib
+pandas
+numpy
