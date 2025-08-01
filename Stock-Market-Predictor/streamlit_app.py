@@ -26,7 +26,7 @@ if 'sample_loaded' not in st.session_state:
 if 'data' not in st.session_state:
     st.session_state.data = None
 
-if st.button("Load Sample Data (ADANIPORTS)"):
+if st.button("Load Sample Data (AAPL)"):
     try:
         # Using a more suitable single-stock data source
         sample_url = "https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv"
@@ -70,25 +70,24 @@ if st.session_state.data is not None:
         bb_std = st.slider("Bollinger Bands Std Dev", 1, 3, 2)
         rsi_period = st.slider("RSI Period", 5, 30, 14)
 
-    with st.sidebar.expander("Date Range"):
-        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-        min_date = df['Date'].min().date() if not df.empty and pd.notna(df['Date'].min()) else datetime.now().date() - timedelta(days=365*2)
-        max_date = df['Date'].max().date() if not df.empty and pd.notna(df['Date'].max()) else datetime.now().date()
-        
-        default_start = max_date - timedelta(days=365)
-        
-        start_date = st.date_input("Start Date", value=default_start, min_value=min_date, max_value=max_date)
-        end_date = st.date_input("End Date", value=max_date, min_value=min_date, max_value=max_date)
-        
     try:
         df.columns = df.columns.str.strip().str.title()
         df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
         df.dropna(subset=['Date'], inplace=True)
         df.set_index('Date', inplace=True)
-        
+
+        with st.sidebar.expander("Date Range"):
+            min_date = df.index.min().date() if not df.empty and pd.notna(df.index.min()) else datetime.now().date() - timedelta(days=365*2)
+            max_date = df.index.max().date() if not df.empty and pd.notna(df.index.max()) else datetime.now().date()
+            
+            default_start = max_date - timedelta(days=365)
+            
+            start_date = st.date_input("Start Date", value=default_start, min_value=min_date, max_value=max_date)
+            end_date = st.date_input("End Date", value=max_date, min_value=min_date, max_value=max_date)
+
         df = df[(df.index >= pd.to_datetime(start_date)) & (df.index <= pd.to_datetime(end_date))]
         if df.empty:
-            st.warning("No data available in selected date range.")
+            st.warning("No data available in selected date range. Please adjust your date range or use a different file.")
             st.stop()
 
         df.dropna(inplace=True)
