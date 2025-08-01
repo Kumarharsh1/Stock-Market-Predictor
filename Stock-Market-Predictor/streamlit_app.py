@@ -2,181 +2,105 @@ import streamlit as st
 import pandas as pd
 import ta
 import mplfinance as mpf
-import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime, timedelta
 
-st.set_page_config(page_title="📈 Stock Chart Analyzer", layout="wide")
-st.title("📈 Candlestick Chart with Buy/Sell Signals")
+st.set_page_config(page_title="📈 Stock Signal Analyzer", layout="wide")
+st.title("📈 Buy/Sell Signal Detection with 5-Condition Strategy")
 
-# File upload
-uploaded_file = st.sidebar.file_uploader("Upload CSV with stock data", type=["csv"])
-
-# Date Range selection
-with st.sidebar.expander("Date Range"):
-    today = datetime.now().date()
-    default_start = today - timedelta(days=180)
-    start_date = st.date_input("Start Date", default_start)
-    end_date = st.date_input("End Date", today)
-
-# Indicator configuration
-with st.sidebar.expander("Indicators"):
-    ema_short = st.slider("Short EMA", 5, 50, 20)
-    ema_long = st.slider("Long EMA", 20, 200, 50)
-    bb_period = st.slider("Bollinger Period", 10, 50, 20)
-    bb_std = st.slider("Bollinger STD Dev", 1, 3, 2)
-    rsi_period = st.slider("RSI Period", 5, 30, 14)
+uploaded_file = st.sidebar.file_uploader("Upload CSV", type=["csv"])
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    df.columns = df.columns.str.strip().str.lower()
 
-    if 'date' not in df.columns or not all(x in df.columns for x in ['open', 'high', 'low', 'close', 'volume']):
-        st.error("CSV must contain columns: Date, Open, High, Low, Close, Volume")
+    # --- Clean columns ---
+    df.columns = df.columns.str.strip().str.lower()
+    if 'date' not in df.columns:
+        st.error("Missing 'Date' column.")
         st.stop()
 
     df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
     df.dropna(subset=['date'], inplace=True)
     df.set_index('date', inplace=True)
-    df.sort_index(inplace=True)
+    df = df.sort_index()
 
-    df_range = df[(df.index.date >= start_date) & (df.index.date <= end_date)].copy()
+    # --- Ensure required columns ---
+    required_cols = ['open', 'high', 'low', 'close', 'volume']
+    for col in required_cols:
+        if col not in df.columns:
+            st.error(f"Missing required column: {col}")
+            st.stop()
 
-    if df_range.empty:
-        st.warning("⚠️ No data available for the selected date range.")
-        st.stop()
+    # --- Indicator Calculation ---
+    df['vwap'] = ta.volume.VolumeWeightedAveragePrice(df['high'], df['low'], df['close'], df['volume']).volume_weighted_average_price()
+    df['ema_fast'] = ta.trend.EMAIndicator(df['close'], window=20).ema_indicator()
+    df['ema_slow'] = ta.trend.EMAIndicator(df['close'], window=50).ema_indicator()
 
-    df_range['vwap'] = ta.volume.VolumeWeightedAveragePrice(df_range['high'], df_range['low'], df_range['close'], df_range['volume']).volume_weighted_average_price()
-    df_range[f'ema{ema_short}'] = ta.trend.EMAIndicator(df_range['close'], ema_short).ema_indicator()
-    df_range[f'ema{ema_long}'] = ta.trend.EMAIndicator(df_range['close'], ema_long).ema_indicator()
+    bb = ta.volatility.BollingerBands(df['close'], window=20, window_dev=2)
+    df['bb_upper'] = bb.bollinger_hband()
+    df['bb_lower'] = bb.bollinger_lband()
+    df['bb_middle'] = bb.bollinger_mavg()
 
-    bb = ta.volatility.BollingerBands(df_range['close'], bb_period, bb_std)
-    df_range['bb_upper'] = bb.bollinger_hband()
-    df_range['bb_lower'] = bb.bollinger_lband()
+    df['rsi'] = ta.momentum.RSIIndicator(df['close'], window=14).rsi()
+    df['volume_avg10'] = df['volume'].rolling(10).mean()
 
-    macd = ta.trend.MACD(df_range['close'])
-    df_range['macd'] = macd.macd()
-    df_range['macd_signal'] = macd.macd_signal()
+    # --- Signal Logic ---
+    df['buy_signal'] = (
+        (df['close'] > df['vwap']) &
+        (df['ema_fast'] > df['ema_slow']) &
+        (df['rsi'] > 40) & (df['rsi'] < 60) &
+        (df['close'] <= df['bb_lower'] * 1.05) &
+        (df['volume'] > df['volume_avg10'])
+    )
 
-    df_range['rsi'] = ta.momentum.RSIIndicator(df_range['close'], rsi_period).rsi()
+    df['sell_signal'] = (
+        (df['close'] < df['vwap']) &
+        (df['ema_fast'] < df['ema_slow']) &
+        ((df['rsi'] > 70) | (df['rsi'].diff() < -5)) &
+        (df['close'] >= df['bb_upper'] * 0.95) &
+        (df['volume'] > df['volume_avg10'])
+    )
 
-    # Buy/Sell Conditions
-    df_range['buy'] = (df_range[f'ema{ema_short}'] > df_range[f'ema{ema_long}']) & \
-                      (df_range['close'] > df_range['vwap']) & \
-                      (df_range['macd'] > df_range['macd_signal']) & \
-                      (df_range['rsi'] > 30)
+    # --- Markers for mplfinance ---
+    df['buy_marker'] = np.where(df['buy_signal'], df['low'] * 0.98, np.nan)
+    df['sell_marker'] = np.where(df['sell_signal'], df['high'] * 1.02, np.nan)
 
-    df_range['sell'] = (df_range[f'ema{ema_short}'] < df_range[f'ema{ema_long}']) & \
-                       (df_range['close'] < df_range['vwap']) & \
-                       (df_range['macd'] < df_range['macd_signal']) & \
-                       (df_range['rsi'] < 70)
+    # --- Show Buy/Sell message button ---
+    last_signal = None
+    if df['buy_signal'].iloc[-1]:
+        last_signal = 'Buy'
+    elif df['sell_signal'].iloc[-1]:
+        last_signal = 'Sell'
+    else:
+        last_signal = 'Neutral'
 
-    df_range['buy_marker'] = np.where(df_range['buy'].diff() == 1, df_range['low'] * 0.98, np.nan)
-    df_range['sell_marker'] = np.where(df_range['sell'].diff() == 1, df_range['high'] * 1.02, np.nan)
+    st.button(f"📢 Current Signal: {last_signal.upper()}")
 
-    # Show last signals
-    st.subheader("Recent Buy/Sell Signals")
-    col1, col2 = st.columns(2)
-    col1.write(df_range[df_range['buy_marker'].notna()].tail(5))
-    col2.write(df_range[df_range['sell_marker'].notna()].tail(5))
-
-    # Plot chart
-    st.subheader("📊 Candlestick Chart")
-
+    # --- Create addplots ---
     apds = [
-        mpf.make_addplot(df_range[f'ema{ema_short}'], color='blue', width=1.2),
-        mpf.make_addplot(df_range[f'ema{ema_long}'], color='orange', width=1.2),
-        mpf.make_addplot(df_range['vwap'], color='purple', linestyle='--'),
-        mpf.make_addplot(df_range['bb_upper'], color='gray', linestyle='--'),
-        mpf.make_addplot(df_range['bb_lower'], color='gray', linestyle='--'),
-        mpf.make_addplot(df_range['buy_marker'], type='scatter', marker='^', markersize=100, color='green'),
-        mpf.make_addplot(df_range['sell_marker'], type='scatter', marker='v', markersize=100, color='red')
+        mpf.make_addplot(df['ema_fast'], color='blue'),
+        mpf.make_addplot(df['ema_slow'], color='orange'),
+        mpf.make_addplot(df['vwap'], color='purple', linestyle='--'),
+        mpf.make_addplot(df['bb_upper'], color='gray', linestyle='--'),
+        mpf.make_addplot(df['bb_lower'], color='gray', linestyle='--'),
+        mpf.make_addplot(df['buy_marker'], type='scatter', marker='^', markersize=100, color='green'),
+        mpf.make_addplot(df['sell_marker'], type='scatter', marker='v', markersize=100, color='red')
     ]
 
-    fig, axes = mpf.plot(
-        df_range,
+    # --- Plot chart ---
+    st.subheader("Candlestick Chart with Strategy Signals")
+    fig, _ = mpf.plot(
+        df,
         type='candle',
-        volume=True,
         style='yahoo',
-        title="Strategy Chart (VWAP, EMA, Bollinger Bands, Buy/Sell)",
+        volume=True,
+        title="Buy/Sell Signal Chart",
         addplot=apds,
-        figscale=1.8,
+        figscale=1.6,
         figratio=(16, 9),
         returnfig=True
     )
     st.pyplot(fig)
 
 else:
-    st.info("Upload your CSV file from NSE or Yahoo Finance to begin analysis.")
-    # --- BUY/SELL Button Indicator at Top ---
-if 'data' in st.session_state and st.session_state.data is not None:
-    df_signal = st.session_state.data.copy()
-    if 'buy' in df_signal.columns and 'sell' in df_signal.columns:
-        signal = "Neutral"
-        color = "gray"
-        if df_signal['buy'].iloc[-1]:
-            signal = "BUY NOW"
-            color = "green"
-        elif df_signal['sell'].iloc[-1]:
-            signal = "SELL NOW"
-            color = "red"
-        
-        st.markdown(f"""
-        <div style='text-align:center; margin-top:10px; margin-bottom:10px;'>
-            <button style="background-color:{color}; color:white; font-size:20px; padding:10px 30px; border:none; border-radius:10px;">
-                {signal}
-            </button>
-        </div>
-        """, unsafe_allow_html=True)
-        # --- Additional Calculations ---
-df['ema_fast'] = ta.trend.EMAIndicator(df['close'], window=20).ema_indicator()
-df['ema_slow'] = ta.trend.EMAIndicator(df['close'], window=50).ema_indicator()
-df['volume_avg10'] = df['volume'].rolling(window=10).mean()
-
-# --- Signal Logic ---
-df['buy_signal'] = (
-    (df['close'] > df['vwap']) &
-    (df['ema_fast'] > df['ema_slow']) &
-    (df['rsi'] > 40) & (df['rsi'] < 60) &
-    (df['close'] <= df['bb_lower'] * 1.05) &  # close is near or below lower BB
-    (df['volume'] > df['volume_avg10'])
-)
-
-df['sell_signal'] = (
-    (df['close'] < df['vwap']) &
-    (df['ema_fast'] < df['ema_slow']) &
-    ((df['rsi'] > 70) | (df['rsi'].diff() < -5)) &
-    (df['close'] >= df['bb_upper'] * 0.95) &  # close is near or above upper BB
-    (df['volume'] > df['volume_avg10'])
-)
-
-# --- Display Buy/Sell Bar ---
-latest_signal = "Neutral"
-bg_color = "#999999"
-
-if df['buy_signal'].iloc[-1]:
-    latest_signal = "BUY Signal Active 📈"
-    bg_color = "#2ecc71"
-elif df['sell_signal'].iloc[-1]:
-    latest_signal = "SELL Signal Active 📉"
-    bg_color = "#e74c3c"
-
-st.markdown(f"""
-<div style='
-    background-color:{bg_color};
-    color:white;
-    font-size:24px;
-    padding:15px;
-    text-align:center;
-    border-radius:8px;
-    margin-bottom:20px;
-'>
-{latest_signal}
-</div>
-""", unsafe_allow_html=True)
-df['buy_marker'] = np.where(df['buy_signal'], df['low'] * 0.98, np.nan)
-df['sell_marker'] = np.where(df['sell_signal'], df['high'] * 1.02, np.nan)
-mpf.make_addplot(df['buy_marker'], type='scatter', marker='^', color='lime', markersize=120),
-mpf.make_addplot(df['sell_marker'], type='scatter', marker='v', color='red', markersize=120),
-
-
+    st.info("Upload a stock CSV file with 'Date, Open, High, Low, Close, Volume' columns.")
