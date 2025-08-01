@@ -172,3 +172,4 @@ else:
     ### About the App:
     - **Technical Analysis:** The app uses popular indicators like EMA, Bollinger Bands, RSI, and MACD to generate Buy/Sell signals.
     - **Machine Learning:** A simple Linear Regression model is trained on historical data to predict the next day's closing price based on the selected indicators.
+    """)
