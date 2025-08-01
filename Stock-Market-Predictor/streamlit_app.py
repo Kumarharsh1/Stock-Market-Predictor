@@ -42,7 +42,7 @@ if st.sidebar.button("Fetch Data"):
                 st.session_state.ticker = ticker_symbol
                 st.success(f"Successfully fetched data for {ticker_symbol}!")
             else:
-                st.error(f"No data found for the ticker symbol: {ticker_symbol}")
+                st.error(f"No data found for the ticker symbol: {ticker_symbol} in the selected date range. Please check the ticker and dates.")
                 st.session_state.data = None
         except Exception as e:
             st.error(f"An error occurred while fetching data: {e}")
@@ -61,6 +61,11 @@ with st.sidebar.expander("Technical Indicators"):
 # --- Main App Logic ---
 if 'data' in st.session_state and st.session_state.data is not None:
     df = st.session_state.data.copy()
+
+    # --- CRITICAL FIX: Add this check to prevent errors with empty dataframes ---
+    if df.empty:
+        st.warning("The selected data is empty. Please check your ticker and date range.")
+        st.stop()
     
     # Rename columns to lowercase for ta library
     df.columns = [col.lower() for col in df.columns]
