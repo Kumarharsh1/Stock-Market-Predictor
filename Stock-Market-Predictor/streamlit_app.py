@@ -1,117 +1,110 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import ta
-import matplotlib.pyplot as plt
 import mplfinance as mpf
+import matplotlib.pyplot as plt
+import numpy as np
 from datetime import datetime, timedelta
 
-st.set_page_config(page_title="Zoomed Strategy Chart", layout="wide")
+st.set_page_config(page_title="📈 Stock Chart Analyzer", layout="wide")
+st.title("📈 Candlestick Chart with Buy/Sell Signals")
 
-st.title("📈 Buy/Sell Signal Strategy Chart (Zoomable)")
+# File upload
+uploaded_file = st.sidebar.file_uploader("Upload CSV with stock data", type=["csv"])
 
-# --- Upload CSV ---
-uploaded_file = st.sidebar.file_uploader("Upload CSV", type="csv")
+# Date Range selection
+with st.sidebar.expander("Date Range"):
+    today = datetime.now().date()
+    default_start = today - timedelta(days=180)
+    start_date = st.date_input("Start Date", default_start)
+    end_date = st.date_input("End Date", today)
+
+# Indicator configuration
+with st.sidebar.expander("Indicators"):
+    ema_short = st.slider("Short EMA", 5, 50, 20)
+    ema_long = st.slider("Long EMA", 20, 200, 50)
+    bb_period = st.slider("Bollinger Period", 10, 50, 20)
+    bb_std = st.slider("Bollinger STD Dev", 1, 3, 2)
+    rsi_period = st.slider("RSI Period", 5, 30, 14)
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
     df.columns = df.columns.str.strip().str.lower()
 
-    required_cols = ['date', 'open', 'high', 'low', 'close', 'volume']
-    if not all(col in df.columns for col in required_cols):
-        st.error(f"CSV must contain: {', '.join(required_cols)}")
+    if 'date' not in df.columns or not all(x in df.columns for x in ['open', 'high', 'low', 'close', 'volume']):
+        st.error("CSV must contain columns: Date, Open, High, Low, Close, Volume")
         st.stop()
 
-    # Parse date & clean
     df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
     df.dropna(subset=['date'], inplace=True)
     df.set_index('date', inplace=True)
     df.sort_index(inplace=True)
 
-    df.dropna(subset=['open', 'high', 'low', 'close', 'volume'], inplace=True)
+    df_range = df[(df.index.date >= start_date) & (df.index.date <= end_date)].copy()
 
-    # --- Indicator Calculation ---
-    df['ema20'] = ta.trend.ema_indicator(df['close'], window=20)
-    df['ema50'] = ta.trend.ema_indicator(df['close'], window=50)
-
-    df['vwap'] = ta.volume.VolumeWeightedAveragePrice(
-        high=df['high'], low=df['low'], close=df['close'], volume=df['volume']
-    ).volume_weighted_average_price()
-
-    bb = ta.volatility.BollingerBands(df['close'], window=20, window_dev=2)
-    df['bb_upper'] = bb.bollinger_hband()
-    df['bb_lower'] = bb.bollinger_lband()
-
-    df['rsi'] = ta.momentum.RSIIndicator(df['close'], window=14).rsi()
-    macd = ta.trend.MACD(df['close'])
-    df['macd'] = macd.macd()
-    df['macd_signal'] = macd.macd_signal()
-
-    # --- Buy/Sell Logic ---
-    df['buy_marker'] = np.where((df['close'] > df['ema20']) & (df['close'] > df['ema50']), df['low'] * 0.98, np.nan)
-    df['sell_marker'] = np.where((df['close'] < df['ema20']) & (df['close'] < df['ema50']), df['high'] * 1.02, np.nan)
-
-    st.sidebar.subheader("📅 Select Date Range")
-
-    min_date = df.index.min().date()
-    max_date = df.index.max().date()
-
-    start_date = st.sidebar.date_input("Start", value=max_date - timedelta(days=60), min_value=min_date, max_value=max_date)
-    end_date = st.sidebar.date_input("End", value=max_date, min_value=min_date, max_value=max_date)
-
-    df_range = df[(df.index.date >= start_date) & (df.index.date <= end_date)]
     if df_range.empty:
-        st.warning("No data in selected range.")
+        st.warning("⚠️ No data available for the selected date range.")
         st.stop()
 
-    # --- Left Panel: Indicator Values ---
-    latest = df_range.iloc[-1]
-    st.sidebar.subheader("📊 Latest Indicator Values")
-    st.sidebar.metric("EMA20", f"{latest['ema20']:.2f}")
-    st.sidebar.metric("EMA50", f"{latest['ema50']:.2f}")
-    st.sidebar.metric("VWAP", f"{latest['vwap']:.2f}")
-    st.sidebar.metric("RSI", f"{latest['rsi']:.2f}")
-    st.sidebar.metric("MACD", f"{latest['macd']:.2f}")
-    st.sidebar.metric("MACD Signal", f"{latest['macd_signal']:.2f}")
+    df_range['vwap'] = ta.volume.VolumeWeightedAveragePrice(df_range['high'], df_range['low'], df_range['close'], df_range['volume']).volume_weighted_average_price()
+    df_range[f'ema{ema_short}'] = ta.trend.EMAIndicator(df_range['close'], ema_short).ema_indicator()
+    df_range[f'ema{ema_long}'] = ta.trend.EMAIndicator(df_range['close'], ema_long).ema_indicator()
 
-    # --- Chart ---
-    st.subheader("📌 Zoomed Chart with Buy/Sell Signals")
+    bb = ta.volatility.BollingerBands(df_range['close'], bb_period, bb_std)
+    df_range['bb_upper'] = bb.bollinger_hband()
+    df_range['bb_lower'] = bb.bollinger_lband()
+
+    macd = ta.trend.MACD(df_range['close'])
+    df_range['macd'] = macd.macd()
+    df_range['macd_signal'] = macd.macd_signal()
+
+    df_range['rsi'] = ta.momentum.RSIIndicator(df_range['close'], rsi_period).rsi()
+
+    # Buy/Sell Conditions
+    df_range['buy'] = (df_range[f'ema{ema_short}'] > df_range[f'ema{ema_long}']) & \
+                      (df_range['close'] > df_range['vwap']) & \
+                      (df_range['macd'] > df_range['macd_signal']) & \
+                      (df_range['rsi'] > 30)
+
+    df_range['sell'] = (df_range[f'ema{ema_short}'] < df_range[f'ema{ema_long}']) & \
+                       (df_range['close'] < df_range['vwap']) & \
+                       (df_range['macd'] < df_range['macd_signal']) & \
+                       (df_range['rsi'] < 70)
+
+    df_range['buy_marker'] = np.where(df_range['buy'].diff() == 1, df_range['low'] * 0.98, np.nan)
+    df_range['sell_marker'] = np.where(df_range['sell'].diff() == 1, df_range['high'] * 1.02, np.nan)
+
+    # Show last signals
+    st.subheader("Recent Buy/Sell Signals")
+    col1, col2 = st.columns(2)
+    col1.write(df_range[df_range['buy_marker'].notna()].tail(5))
+    col2.write(df_range[df_range['sell_marker'].notna()].tail(5))
+
+    # Plot chart
+    st.subheader("📊 Candlestick Chart")
 
     apds = [
-        mpf.make_addplot(df_range['ema20'], color='blue', width=1.2),
-        mpf.make_addplot(df_range['ema50'], color='orange', width=1.2),
+        mpf.make_addplot(df_range[f'ema{ema_short}'], color='blue', width=1.2),
+        mpf.make_addplot(df_range[f'ema{ema_long}'], color='orange', width=1.2),
         mpf.make_addplot(df_range['vwap'], color='purple', linestyle='--'),
         mpf.make_addplot(df_range['bb_upper'], color='gray', linestyle='--'),
         mpf.make_addplot(df_range['bb_lower'], color='gray', linestyle='--'),
-        mpf.make_addplot(df_range['buy_marker'], type='scatter', marker='^', color='green', markersize=150),
-        mpf.make_addplot(df_range['sell_marker'], type='scatter', marker='v', color='red', markersize=150)
+        mpf.make_addplot(df_range['buy_marker'], type='scatter', marker='^', markersize=100, color='green'),
+        mpf.make_addplot(df_range['sell_marker'], type='scatter', marker='v', markersize=100, color='red')
     ]
 
-    fig, _ = mpf.plot(
+    fig, axes = mpf.plot(
         df_range,
         type='candle',
         volume=True,
         style='yahoo',
-        title="Zoomed Buy/Sell Strategy Chart",
+        title="Strategy Chart (VWAP, EMA, Bollinger Bands, Buy/Sell)",
         addplot=apds,
-        figscale=2.5,
+        figscale=1.8,
         figratio=(16, 9),
-        returnfig=True,
-        savefig='figure1_strategy_chart.png'
+        returnfig=True
     )
-
     st.pyplot(fig)
-    st.success("Chart saved as: `figure1_strategy_chart.png`")
-
-    # Optional: show Buy/Sell table
-    st.subheader("📌 Recent Buy/Sell Signals")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("✅ Buy Signals")
-        st.dataframe(df_range[df_range['buy_marker'].notna()][['close', 'ema20', 'ema50']].tail(5))
-    with col2:
-        st.write("❌ Sell Signals")
-        st.dataframe(df_range[df_range['sell_marker'].notna()][['close', 'ema20', 'ema50']].tail(5))
 
 else:
-    st.info("Upload a CSV file with columns: Date, Open, High, Low, Close, Volume.")
+    st.info("Upload your CSV file from NSE or Yahoo Finance to begin analysis.")
