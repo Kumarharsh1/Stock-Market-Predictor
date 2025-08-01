@@ -77,6 +77,17 @@ if uploaded_file:
         (df['close'] > df['bb_upper'] * 0.95) &
         (df['volume'] > df['vol_avg'])
     )
+    st.write("Matching Buy Conditions", df[
+    (df['close'] > df['vwap']) &
+    (df['ema_fast'] > df['ema_slow']) &
+    (df['rsi'] > 40) & (df['rsi'] < 60) &
+    (df['close'] < df['bb_lower'] * 1.02) &
+    (df['volume'] > df['volume'].rolling(10).mean())
+])
+if df['buy_signal'].any():
+    latest_buy = df[df['buy_signal']].index[-1]
+    # then display that in the top bar even if it's out of current range
+
 
     df['buy_marker'] = np.where(df['buy_signal'], df['low'] * 0.98, np.nan)
     df['sell_marker'] = np.where(df['sell_signal'], df['high'] * 1.02, np.nan)
