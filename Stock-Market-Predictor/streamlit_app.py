@@ -1,289 +1,86 @@
-# Load and rename columns if necessary
-import pandas as pd
-
-
-
-
 import streamlit as st
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import ta
+import mplfinance as mpf
+from datetime import datetime
 
-st.title("📈 Stock Market Predictor")
-import pandas as pd
+st.set_page_config(page_title="Stock Strategy Chart", layout="wide")
+st.title("📈 Strategy Chart with VWAP, EMA & Bollinger Bands")
 
+# Load CSV file
+uploaded_file = st.file_uploader("Upload your stock CSV file", type="csv")
 
-
-uploaded_file = st.file_uploader("Upload your ADANIPORTS CSV file", type=["csv"])
-
-
-import streamlit as st
-
-
-
-
-if uploaded_file is not None:
+if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    df.columns = df.columns.str.strip()
-    st.success("✅ File uploaded successfully!")
-    
-    # Show the dataframe
-    st.write("### Preview of Uploaded df", df.head())
 
-    # Parse date column if available
-    if 'Date' in df.columns:
-        df['Date'] = pd.to_datetime(df['Date'])
-        st.line_chart(df.set_index("Date")["Close"])
-    else:
-        st.error("❌ 'Date' column not found.")
+    # Convert all column names to lowercase
+    df.columns = df.columns.str.strip().str.lower()
+
+    # Check required columns
+    required = ['date', 'open', 'high', 'low', 'close', 'volume']
+    if not all(col in df.columns for col in required):
+        st.error(f"CSV must contain: {', '.join(required)}")
+        st.stop()
+
+    # Parse date
+    df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
+    df.dropna(subset=['date'], inplace=True)
+    df.set_index('date', inplace=True)
+
+    # Drop any rows with missing core data
+    df.dropna(subset=['open', 'high', 'low', 'close', 'volume'], inplace=True)
+
+    # Calculate Indicators
+    df['ema20'] = ta.trend.ema_indicator(df['close'], window=20)
+    df['ema50'] = ta.trend.ema_indicator(df['close'], window=50)
+
+    df['vwap'] = ta.volume.VolumeWeightedAveragePrice(
+        high=df['high'],
+        low=df['low'],
+        close=df['close'],
+        volume=df['volume']
+    ).volume_weighted_average_price()
+
+    bb = ta.volatility.BollingerBands(close=df['close'], window=20, window_dev=2)
+    df['bb_upper'] = bb.bollinger_hband()
+    df['bb_lower'] = bb.bollinger_lband()
+
+    # Buy/Sell markers (dummy logic – can be improved)
+    df['buy_marker'] = np.where((df['close'] > df['ema20']) & (df['close'] > df['ema50']), df['low'] * 0.98, np.nan)
+    df['sell_marker'] = np.where((df['close'] < df['ema20']) & (df['close'] < df['ema50']), df['high'] * 1.02, np.nan)
+
+    # Show table
+    st.subheader("Data Snapshot")
+    st.dataframe(df.tail())
+
+    # Plot chart
+    apds = [
+        mpf.make_addplot(df['ema20'], color='blue', width=1.5),
+        mpf.make_addplot(df['ema50'], color='orange', width=1.5),
+        mpf.make_addplot(df['vwap'], color='purple', linestyle='--'),
+        mpf.make_addplot(df['bb_upper'], color='gray', linestyle='--'),
+        mpf.make_addplot(df['bb_lower'], color='gray', linestyle='--'),
+        mpf.make_addplot(df['buy_marker'], type='scatter', marker='^', color='green', markersize=100),
+        mpf.make_addplot(df['sell_marker'], type='scatter', marker='v', color='red', markersize=100)
+    ]
+
+    fig, axlist = mpf.plot(
+        df,
+        type='candle',
+        volume=True,
+        style='yahoo',
+        title="Strategy Chart (VWAP, EMA, Bollinger Bands)",
+        addplot=apds,
+        figscale=2.0,
+        figratio=(18, 10),
+        returnfig=True,
+        savefig='figure1_strategy_chart.png'
+    )
+
+    st.subheader("Candlestick Chart with Indicators")
+    st.pyplot(fig)
+    st.success("Chart saved as 'figure1_strategy_chart.png'")
 else:
-    st.warning("⚠️ Please upload a CSV file to continue.")
-
-  # example
-
-
-import streamlit as st
-import pandas as pd
-import os
-
-# 👀 Check which files are available
-st.write("Visible files:", os.listdir())
-
-# 📥 Load your data (make sure the file exists)
-df = pd.read_csv("Stock-Market-Predictor/ADANIPORTS.csv")  # Replace with your actual filename
-
-# 🧼 Clean column names: strip spaces and title-case them
-df.columns = df.columns.str.strip().str.title()
-
-# 👓 Show the cleaned DataFrame
-st.write("Formatted DataFrame:", df.head())
-
-
-
-
-# Clean up column names (remove spaces, weird chars)
-df.columns = df.columns.str.strip()
-
-# Debug: show column names
-import streamlit as st
-st.write("✅ Columns in CSV:", df.columns.tolist())
-
-# Now safely parse the 'Date' column
-df['Date'] = pd.to_datetime(df['Date'])
-import os
-import streamlit as st
-st.write("Current working directory:", os.getcwd())
-st.write("Files in directory:", os.listdir())
-
-
-
-
-
-
-import streamlit as st
-import pandas as pd
-
-uploaded_file = st.file_uploader("Upload your CSV", type="csv")
-df.columns = [str(col).strip().title() for col in df.columns]
-
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-
-print(df.columns.tolist())
-
-# Rename to standard column names
-df.rename(columns={
-    'date': 'Date',
-    'open': 'Open',
-    'high': 'High',
-    'low': 'Low',
-    'close': 'Close',
-    'volume': 'Volume'
-}, inplace=True)
-
-# Convert date and set as index
-df['Date'] = pd.to_datetime(df['Date'])
-df.set_index('Date', inplace=True)
-
-# Drop NaNs if any
-df.dropna(inplace=True)
-
-# streamlit_app.py
-
-st.write(df.head())
-
-import pandas as pd
-import ta
-import mplfinance as mpf
-# ... rest of your code
-
-import ta
-import mplfinance as mpf
-
-# VWAP
-vwap = ta.volume.VolumeWeightedAveragePrice(
-    high=df['High'], low=df['Low'], close=df['Close'], volume=df['Volume']
-)
-df['VWAP'] = vwap.volume_weighted_average_price()
-
-# EMAs
-df['EMA20'] = ta.trend.EMAIndicator(close=df['Close'], window=20).ema_indicator()
-df['EMA50'] = ta.trend.EMAIndicator(close=df['Close'], window=50).ema_indicator()
-
-# Bollinger Bands
-bb = ta.volatility.BollingerBands(close=df['Close'], window=20, window_dev=2)
-df['BB_upper'] = bb.bollinger_hband()
-df['BB_lower'] = bb.bollinger_lband()
-
-# Ensure your df has these columns: ema_short, ema_long, vwap, buy_marker, sell_marker
-apds = [
-    mpf.make_addplot(df['ema20'], color='blue', width=1.5, panel=0),
-    mpf.make_addplot(df['ema50'], color='orange', width=1.5, panel=0),
-    mpf.make_addplot(df['vwap'], color='purple', linestyle='--', panel=0),
-    mpf.make_addplot(df['bb_upper'], color='gray', linestyle='--', width=1, panel=0),
-    mpf.make_addplot(df['bb_lower'], color='gray', linestyle='--', width=1, panel=0),
-    mpf.make_addplot(df['buy_marker'], type='scatter', marker='^', markersize=100, color='green', panel=0),
-    mpf.make_addplot(df['sell_marker'], type='scatter', marker='v', markersize=100, color='red', panel=0)
-]
-
-mpf.plot(
-    df,
-    type='candle',
-    volume=True,
-    style='yahoo',
-    title="ADANIPORTS Strategy Chart (VWAP, EMA, Bollinger Bands)",
-    addplot=apds,
-    figscale=2.0,
-    figratio=(18, 10),
-    savefig='figure1_strategy_chart.png'
-)
-
-
-from google.colab import files
-files.download('figure1_strategy_chart.png')
-
-# Zoom into a specific range, e.g., a range present in the data
-zoom_df = df.loc['2021-01-01':'2021-01-31']
-import ta
-
-# Calculate EMA20 and EMA50 and add to DataFrame
-df['EMA20'] = ta.trend.EMAIndicator(df['Close'], window=20).ema_indicator()
-df['EMA50'] = ta.trend.EMAIndicator(df['Close'], window=50).ema_indicator()
-
-# Calculate VWAP
-df['VWAP'] = ta.volume.VolumeWeightedAveragePrice(
-    high=df['High'],
-    low=df['Low'],
-    close=df['Close'],
-    volume=df['Volume']
-).volume_weighted_average_price()
-
-# Calculate Bollinger Bands
-bb = ta.volatility.BollingerBands(close=df['Close'], window=20, window_dev=2)
-df['BB_upper'] = bb.bollinger_hband()
-df['BB_lower'] = bb.bollinger_lband()
-
-# (Optional) Dummy buy/sell markers to avoid other errors
-df['Buy'] = df['Low'] * 0.98
-df['Sell'] = df['High'] * 1.02
-
-
-add_plots_zoom = [
-    mpf.make_addplot(zoom_df['EMA20'], color='blue'),
-    mpf.make_addplot(zoom_df['EMA50'], color='orange'),
-    mpf.make_addplot(zoom_df['VWAP'], color='purple', linestyle=':'),
-    mpf.make_addplot(zoom_df['BB_upper'], color='gray', linestyle='--'),
-    mpf.make_addplot(zoom_df['BB_lower'], color='gray', linestyle='--')
-]
-
-mpf.plot(
-    zoom_df,
-    type='candle',
-    volume=True,
-    title="Zoomed View - VWAP, EMA, BB (Jan 2023)",
-    style='yahoo',
-    addplot=add_plots_zoom,
-    figscale=2.2,
-    figratio=(16, 9),
-    savefig='figure_zoomed_section.png'
-)
-
-from google.colab import files
-files.download('figure_zoomed_section.png')
-
-# Buy condition: EMA20 > EMA50 and Close > VWAP
-buy_signals = (df['EMA20'] > df['EMA50']) & (df['Close'] > df['VWAP'])
-
-# Sell condition: EMA20 < EMA50 and Close < VWAP
-sell_signals = (df['EMA20'] < df['EMA50']) & (df['Close'] < df['VWAP'])
-
-# Create buy/sell markers
-df['Buy'] = df['Low'][buy_signals] * 0.98  # slightly below candle for arrow
-df['Sell'] = df['High'][sell_signals] * 1.02  # slightly above candle
-
-import mplfinance as mpf
-
-apds = [
-    mpf.make_addplot(df['EMA20'], color='blue'),
-    mpf.make_addplot(df['EMA50'], color='orange'),
-    mpf.make_addplot(df['VWAP'], color='purple', linestyle=':'),
-    mpf.make_addplot(df['BB_upper'], color='gray', linestyle='--'),
-    mpf.make_addplot(df['BB_lower'], color='gray', linestyle='--'),
-
-    # Arrows
-    mpf.make_addplot(df['Buy'], type='scatter', marker='^', markersize=200,
-                     color='green', panel=0),
-    mpf.make_addplot(df['Sell'], type='scatter', marker='v', markersize=200,
-                     color='red', panel=0)
-]
-
-mpf.plot(
-    df,
-    type='candle',
-    volume=True,
-    style='yahoo',
-    title='Buy/Sell Signal Chart with VWAP, EMA, Bollinger Bands',
-    addplot=apds,
-    figscale=2.2,
-    figratio=(16, 9),
-    savefig='figure2_buy_sell_chart.png'
-)
-
-from google.colab import files
-files.download('figure2_buy_sell_chart.png')
-
-# Choose a short time window to zoom in
-zoom_df = df.loc['2021-01-01':'2021-01-31'].copy()
-
-# Recalculate conditions in zoomed data
-zoom_df['Buy'] = zoom_df['Low'][
-    (zoom_df['EMA20'] > zoom_df['EMA50']) & (zoom_df['Close'] > zoom_df['VWAP'])
-] * 0.98
-
-zoom_df['Sell'] = zoom_df['High'][
-    (zoom_df['EMA20'] < zoom_df['EMA50']) & (zoom_df['Close'] < zoom_df['VWAP'])
-] * 1.02
-
-apds_zoom = [
-    mpf.make_addplot(zoom_df['EMA20'], color='blue'),
-    mpf.make_addplot(zoom_df['EMA50'], color='orange'),
-    mpf.make_addplot(zoom_df['VWAP'], color='purple', linestyle=':'),
-    mpf.make_addplot(zoom_df['BB_upper'], color='gray', linestyle='--'),
-    mpf.make_addplot(zoom_df['BB_lower'], color='gray', linestyle='--'),
-
-    # Buy/Sell markers
-    mpf.make_addplot(zoom_df['Buy'], type='scatter', marker='^', markersize=200,
-                     color='green', panel=0),
-    mpf.make_addplot(zoom_df['Sell'], type='scatter', marker='v', markersize=200,
-                     color='red', panel=0)
-]
-
-mpf.plot(
-    zoom_df,
-    type='candle',
-    volume=True,
-    style='yahoo',
-    title='Zoomed Buy/Sell Chart (Jan 2023) with Indicators',
-    addplot=apds_zoom,
-    figscale=2.2,
-    figratio=(18, 10),
-    savefig='figure_zoomed_buy_sell.png'
-)
+    st.info("Please upload a CSV file with columns: Date, Open, High, Low, Close, Volume")
