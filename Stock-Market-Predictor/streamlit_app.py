@@ -133,27 +133,28 @@ bb = ta.volatility.BollingerBands(close=df['Close'], window=20, window_dev=2)
 df['BB_upper'] = bb.bollinger_hband()
 df['BB_lower'] = bb.bollinger_lband()
 
-add_plots = [
-    mpf.make_addplot(df['EMA20'], color='blue', width=1.5),
-    mpf.make_addplot(df['EMA50'], color='orange', width=1.5),
-    mpf.make_addplot(df['VWAP'], color='purple', linestyle=':', width=1.5),
-    mpf.make_addplot(df['BB_upper'], color='gray', linestyle='--', width=1),
-    mpf.make_addplot(df['BB_lower'], color='gray', linestyle='--', width=1)
+# Ensure your df has these columns: ema_short, ema_long, vwap, buy_marker, sell_marker
+apds = [
+    mpf.make_addplot(df['ema20'], color='blue', width=1.5, panel=0),
+    mpf.make_addplot(df['ema50'], color='orange', width=1.5, panel=0),
+    mpf.make_addplot(df['vwap'], color='purple', linestyle='--', panel=0),
+    mpf.make_addplot(df['bb_upper'], color='gray', linestyle='--', width=1, panel=0),
+    mpf.make_addplot(df['bb_lower'], color='gray', linestyle='--', width=1, panel=0),
+    mpf.make_addplot(df['buy_marker'], type='scatter', marker='^', markersize=100, color='green', panel=0),
+    mpf.make_addplot(df['sell_marker'], type='scatter', marker='v', markersize=100, color='red', panel=0)
 ]
-if not df.empty:
-    # Ensure index and columns are ready
-    fig, _ = mpf.plot(
-        df,
-        type='candle',
-        volume=True,
-        style='yahoo',
-        title="ADANIPORTS Strategy Chart (VWAP, EMA, Bollinger Bands)",
-        addplot=apds,  # apds must be defined earlier
-        figscale=2.0,
-        figratio=(18, 10),
-        returnfig=True,
-        savefig='figure1_strategy_chart.png'
-    )
+
+mpf.plot(
+    df,
+    type='candle',
+    volume=True,
+    style='yahoo',
+    title="ADANIPORTS Strategy Chart (VWAP, EMA, Bollinger Bands)",
+    addplot=apds,
+    figscale=2.0,
+    figratio=(18, 10),
+    savefig='figure1_strategy_chart.png'
+)
 
 
 from google.colab import files
