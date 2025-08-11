@@ -4,6 +4,8 @@
 
 A Streamlit web app that visualizes and analyzes stock price data using historical CSV files. 
 
+Stock Market Predictor Link - https://stock-market-predictor-4dp8c29i7nr5ebrebp28yt.streamlit.app/
+
 Download More Datasets - https://www.kaggle.com/datasets/kumarharsh001/stock-market-data-for-candlestick-analysis
 
 
